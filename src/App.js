@@ -14,7 +14,6 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut, 
-  onAuthStateChanged 
 } from 'firebase/auth';
 
 // Główny komponent aplikacji
@@ -1077,11 +1076,11 @@ const App = () => {
         );
         
         setClients(userClients);
-      }
-    }, [currentUser]);
+      }// eslint-disable-next-line
+    }, [currentUser, clients, setClients]);
     
     // Symulowane pobieranie raportów
-    const fetchReports = (clientId) => {
+    function fetchReports(clientId) {
       // Tutaj w prawdziwej aplikacji pobieralibyśmy dane z Firebase
       const sampleReports = [
         {
@@ -1104,9 +1103,9 @@ const App = () => {
           ]
         }
       ];
-      
+
       setReports(sampleReports);
-    };
+    }
     
     // Efekt przy zmianie wybranego klienta
     useEffect(() => {

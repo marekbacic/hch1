@@ -1,43 +1,174 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
-
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haug Chemie - Aplikacja</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React i ReactDOM -->
+  <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+  
+  <!-- Nowszy Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <!-- Symulowana baza danych -->
+  <script>
+    // Lokalna baza danych w localStorage
+    const localDB = {
+      getCollection: function(name) {
+        const data = localStorage.getItem('haug_' + name);
+        return data ? JSON.parse(data) : [];
+      },
+      
+      saveCollection: function(name, data) {
+        localStorage.setItem('haug_' + name, JSON.stringify(data));
+      },
+      
+      // Inicjalizacja domyślnych danych
+      initDefaultData: function() {
+        // Produkty
+        if (!localStorage.getItem('haug_products')) {
+          this.saveCollection('products', [
+            { id: "1", name: "eska®clean 1001", consumption: 180 },
+            { id: "2", name: "eska®clean 2250", consumption: 150 },
+            { id: "3", name: "eska®strip H 365A", consumption: 220 },
+            { id: "4", name: "eska®phos 2023", consumption: 160 },
+            { id: "5", name: "eska®phos 3045", consumption: 190 }
+          ]);
+        }
+        
+        // Użytkownicy
+        if (!localStorage.getItem('haug_users')) {
+          this.saveCollection('users', [
+            { id: "admin1", name: "Administrator", email: "admin@haugchemie.com", password: "admin123", role: "admin" }
+          ]);
+        }
+        
+        // Klienci i raporty
+        if (!localStorage.getItem('haug_clients')) {
+          this.saveCollection('clients', []);
+        }
+        
+        if (!localStorage.getItem('haug_reports')) {
+          this.saveCollection('reports', []);
+        }
+      }
+    };
+    
+    // Inicjalizacja danych
+    localDB.initDefaultData();
+    
+    // Symulacja funkcji Firestore
+    window.db = {
+      collection: function(collectionName) {
+        return {
+          get: function() {
+            const data = localDB.getCollection(collectionName);
+            return Promise.resolve({
+              empty: data.length === 0,
+              docs: data.map(item => ({
+                id: item.id,
+                data: function() { return item; }
+              }))
+            });
+          },
+          
+          add: function(item) {
+            const data = localDB.getCollection(collectionName);
+            const newItem = { ...item, id: "id_" + Date.now() };
+            data.push(newItem);
+            localDB.saveCollection(collectionName, data);
+            return Promise.resolve({ id: newItem.id });
+          },
+          
+          doc: function(id) {
+            return {
+              update: function(updates) {
+                const data = localDB.getCollection(collectionName);
+                const index = data.findIndex(item => item.id === id);
+                if (index !== -1) {
+                  data[index] = { ...data[index], ...updates };
+                  localDB.saveCollection(collectionName, data);
+                }
+                return Promise.resolve();
+              },
+              
+              delete: function() {
+                const data = localDB.getCollection(collectionName);
+                const filtered = data.filter(item => item.id !== id);
+                localDB.saveCollection(collectionName, filtered);
+                return Promise.resolve();
+              }
+            };
+          },
+          
+          where: function(field, operator, value) {
+            return {
+              get: function() {
+                const data = localDB.getCollection(collectionName);
+                let filtered = data;
+                
+                if (operator === "==") {
+                  filtered = data.filter(item => item[field] === value);
+                }
+                
+                return Promise.resolve({
+                  empty: filtered.length === 0,
+                  docs: filtered.map(item => ({
+                    id: item.id,
+                    data: function() { return item; }
+                  }))
+                });
+              },
+              
+              orderBy: function() {
+                return {
+                  get: function() {
+                    const data = localDB.getCollection(collectionName);
+                    let filtered = data;
+                    
+                    if (operator === "==") {
+                      filtered = data.filter(item => item[field] === value);
+                    }
+                    
+                    return Promise.resolve({
+                      empty: filtered.length === 0,
+                      docs: filtered.map(item => ({
+                        id: item.id,
+                        data: function() { return item; }
+                      }))
+                    });
+                  }
+                };
+              }
+            };
+          },
+          
+          orderBy: function() {
+            return {
+              get: function() {
+                const data = localDB.getCollection(collectionName);
+                return Promise.resolve({
+                  empty: data.length === 0,
+                  docs: data.map(item => ({
+                    id: item.id,
+                    data: function() { return item; }
+                  }))
+                });
+              }
+            };
+          }
+        };
+      }
+    };
+  </script>
+  
+  <!-- Skrypt aplikacji -->
+  <script type="text/babel" src="app.js"></script>
+</body>
 </html>
